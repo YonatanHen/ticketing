@@ -1,7 +1,9 @@
 import express, { Request, Response} from "express";
 import { body, validationResult} from "express-validator"
+import { User } from '../models/user'
 import { RequestValidationError } from "../errors/reqeust-validation-error";
 import { DatabaseConnectionError } from "../errors/database-connection-error";
+import { BadRequestError } from "../errors/bad-request-error";
 
 const router = express.Router();
 
@@ -21,10 +23,20 @@ async (req: Request,res: Response) => {
         throw new RequestValidationError(errors.array());
     }
 
-    console.log("Creating a user...");
-    throw new DatabaseConnectionError();
+    const { email, password } = req.body;
 
-    res.send({});
+    const existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+        // console.log('Email in use');
+        // return res.send({});
+        throw new BadRequestError('Email in use');
+    }
+
+    const user = User.build({ email, password });
+    await user.save();
+    
+    res.status(201).send(user);
 });
 
 export { router as signUpRouter }
